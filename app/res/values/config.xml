@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     SPDX-License-Identifier: Apache-2.0
+-->
+<resources>
+    <!-- Published by github.com/Manan-Santoki/evox-apps -->
+    <string name="index_url" translatable="false">https://s3.msantoki.com/public/EvolutionX/apps/index.json</string>
+    <!-- Copy of the index and the APKs shipped with the ROM -->
+    <string name="bundled_dir" translatable="false">/product/etc/evox-apps</string>
+    <!-- SHA-256 of the signing certificates an app may be signed with: the
+         release key of the patched apps, and MicroG-RE's own key -->
+    <string-array name="allowed_signers" translatable="false">
+        <item>b535ab8d88644e90add44cb43725cbd9807471d71c730d7f38b8ebb2f2eb0276</item>
+        <item>0b6c9515afb195fac59601696ba0a7907a0b217ccf720b43148427ccf64343e7</item>
+    </string-array>
+    <integer name="check_interval_hours">6</integer>
+</resources>

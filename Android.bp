@@ -1,0 +1,17 @@
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+android_app {
+    name: "EvoXApps",
+
+    srcs: ["app/src/**/*.java"],
+    resource_dirs: ["app/res"],
+    manifest: "app/AndroidManifest.xml",
+
+    platform_apis: true,
+    privileged: true,
+    privapp_allowlist: "privapp-permissions-com.msantoki.evoxapps.xml",
+    certificate: "platform",
+    system_ext_specific: true,
+}

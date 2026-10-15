@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     SPDX-License-Identifier: Apache-2.0
+-->
+<resources>
+    <string name="app_name">Bundled apps</string>
+    <string name="settings_summary">YouTube, YouTube Music and Reddit updates</string>
+    <string name="intro">These apps come with the ROM. They are normal apps: uninstall any of them like any other app and it won\'t come back unless you install it again here. Updates are checked every few hours and installed automatically.</string>
+    <string name="auto_update">Automatic updates</string>
+    <string name="auto_update_summary">Install new versions in the background</string>
+    <string name="check_now">Check for updates</string>
+    <string name="checking">Checking…</string>
+    <string name="last_check">Last checked %s</string>
+    <string name="never_checked">Not checked yet</string>
+    <string name="state_installed">Installed %1$s</string>
+    <string name="state_update">Update available: %1$s</string>
+    <string name="state_not_installed">Not installed</string>
+    <string name="state_removed">Uninstalled</string>
+    <string name="state_external">Installed from another source, not managed here</string>
+    <string name="install">Install</string>
+    <string name="update">Update</string>
+    <string name="installing">Installing…</string>
+</resources>
