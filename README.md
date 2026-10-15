@@ -23,6 +23,26 @@ The APKs are built and approved through
 - A package that was installed from somewhere else (for example the official
   Reddit from the Play Store) is left alone.
 
+## Ad blocking
+
+`adblock/` builds in [AdAway](https://github.com/Manan-Santoki/AdAway/tree/evox)
+with a **system** blocking mode that needs neither root nor a VPN:
+
+- AdAway writes its blocklist to `/data/misc/adaway/blocklist`.
+- `adaway.rc` copies it into `/data/misc/adaway/hosts` at boot and whenever
+  AdAway applies new lists, and bind mounts that file over
+  `/system/etc/hosts`, which Android's DNS resolver checks before every lookup.
+- The SELinux rules in `adblock/sepolicy` only let platform-signed apps write
+  it; AdAway is re-signed with the platform key at build time.
+
+It blocks out of the box: on first start AdAway picks the system mode,
+downloads its default lists and keeps them updated daily. It opens from its
+app icon, its Quick Settings tile, or **Settings → Network & internet → Ad
+blocking**. A real VPN keeps working alongside it.
+
+The device's `BoardConfig.mk` must include `vendor/evox-apps/BoardConfig.mk`
+for the SELinux rules.
+
 ## Using it in a build
 
 1. Add the repo to your local manifest at `vendor/evox-apps`.

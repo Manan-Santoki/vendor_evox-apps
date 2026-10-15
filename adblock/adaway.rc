@@ -1,0 +1,22 @@
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# System hosts support for the built-in AdAway (see org.adaway.model.system.SystemHosts).
+# AdAway writes its blocklist to /data/misc/adaway/blocklist; init copies it into
+# /data/misc/adaway/hosts, which is bind mounted over /system/etc/hosts.
+
+on post-fs-data
+    mkdir /data/misc/adaway 0755 system system
+    # Start from the stock hosts file, then the last blocklist if there is one
+    copy /system/etc/hosts /data/misc/adaway/hosts
+    copy /data/misc/adaway/blocklist /data/misc/adaway/hosts
+    chmod 0644 /data/misc/adaway/hosts
+    mount none /data/misc/adaway/hosts /system/etc/hosts bind
+
+# AdAway asks for the directory so it can write its blocklist
+on property:sys.adaway.owner=*
+    chown ${sys.adaway.owner} ${sys.adaway.owner} /data/misc/adaway
+
+# AdAway wrote a new blocklist: make it live. Copied in place, so the mount keeps working.
+on property:sys.adaway.apply=*
+    copy /data/misc/adaway/blocklist /data/misc/adaway/hosts

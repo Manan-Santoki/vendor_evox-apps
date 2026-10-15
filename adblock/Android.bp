@@ -1,0 +1,24 @@
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+// AdAway with the system ad block method, built from
+// https://github.com/Manan-Santoki/AdAway (branch evox).
+// Re-signed with the platform key, which its SELinux rules rely on.
+android_app_import {
+    name: "AdAway",
+    apk: "AdAway.apk",
+    certificate: "platform",
+    system_ext_specific: true,
+    dex_preopt: {
+        enabled: false,
+    },
+    required: ["adaway.rc"],
+}
+
+prebuilt_etc {
+    name: "adaway.rc",
+    src: "adaway.rc",
+    sub_dir: "init",
+    system_ext_specific: true,
+}
