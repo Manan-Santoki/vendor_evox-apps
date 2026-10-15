@@ -1,1 +1,3 @@
 /data/misc/adaway(/.*)?    u:object_r:adaway_data_file:s0
+# The live hosts file, mounted over /system/etc/hosts: readable by everyone
+/data/misc/adaway/hosts    u:object_r:adaway_hosts_file:s0
