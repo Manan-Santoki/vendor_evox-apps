@@ -4,6 +4,10 @@
 type adaway_data_file, file_type, data_file_type, core_data_file_type;
 # The live hosts file, mounted over /system/etc/hosts
 type adaway_hosts_file, file_type, data_file_type, core_data_file_type;
+# AdAway runs with per-user MLS categories (s0:cX,cY) and has to write these s0
+# files; who may write them is still limited by the rules below
+typeattribute adaway_data_file mlstrustedobject;
+typeattribute adaway_hosts_file mlstrustedobject;
 system_internal_prop(adaway_prop)
 
 # At boot init creates the directory, copies the blocklist into the live hosts
