@@ -218,14 +218,31 @@ final class Sync {
 
     /** The MicroG that blocks the official one, or null. */
     private String conflictingMicroG(PackageInfo official) {
-        if (official != null && !installer.isTrusted(official)) return official.packageName;
+        if (official != null && !installedByUs(official.packageName)
+                && !installer.isTrusted(official)) {
+            return official.packageName;
+        }
         for (String pkg : OTHER_MICROG) {
             if (installedInfo(pkg) != null) return pkg;
         }
         return null;
     }
 
+    /** True if we are the installer of record, so we already verified this APK. */
+    private boolean installedByUs(String pkg) {
+        try {
+            String installer = context.getPackageManager().getInstallSourceInfo(pkg)
+                    .getInstallingPackageName();
+            return context.getPackageName().equals(installer);
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
+    }
+
     private void notifyConflict(String pkg) {
+        // Once per conflicting package, not on every check
+        if (pkg.equals(prefs.getString("conflict_notified", null))) return;
+        prefs.edit().putString("conflict_notified", pkg).apply();
         NotificationManager nm = context.getSystemService(NotificationManager.class);
         nm.createNotificationChannel(new NotificationChannel(CHANNEL,
                 context.getString(R.string.app_name), NotificationManager.IMPORTANCE_DEFAULT));
