@@ -133,6 +133,13 @@ final class Sync {
             return new Status(e, pi == null ? State.REMOVED : State.EXTERNAL, pi == null ? null : pi.versionName);
         }
         if (pi == null) {
+            // Same app under a new package name (the KernelSU manager gets a random
+            // one per release): an update, not an uninstall
+            String oldPkg = prefs.getString("pkg_" + e.id, null);
+            PackageInfo old = oldPkg == null || oldPkg.equals(e.packageName) ? null : installedInfo(oldPkg);
+            if (ours != null && old != null) {
+                return new Status(e, State.UPDATE_AVAILABLE, old.versionName);
+            }
             return new Status(e, ours == null ? State.NOT_INSTALLED : State.REMOVED, null);
         }
         if (ours == null) return new Status(e, State.EXTERNAL, pi.versionName);
@@ -194,7 +201,12 @@ final class Sync {
             }
             installer.verify(apk, e);
             installer.install(apk, e);
-            prefs.edit().putString("build_" + e.id, e.build).remove("removed_" + e.id).apply();
+            String oldPkg = prefs.getString("pkg_" + e.id, null);
+            if (oldPkg != null && !oldPkg.equals(e.packageName) && installedInfo(oldPkg) != null) {
+                installer.uninstall(oldPkg);
+            }
+            prefs.edit().putString("build_" + e.id, e.build).putString("pkg_" + e.id, e.packageName)
+                    .remove("removed_" + e.id).apply();
             return true;
         } catch (Exception ex) {
             Log.e(TAG, "could not install " + e.name, ex);

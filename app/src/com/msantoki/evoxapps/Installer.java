@@ -27,6 +27,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -121,6 +122,16 @@ final class Installer {
         Log.i(TAG, "installed " + entry.packageName + " " + entry.build);
     }
 
+    /** Uninstall a package we replaced, for example an older KernelSU manager. */
+    void uninstall(String packageName) {
+        PackageInstaller pi = context.getPackageManager().getPackageInstaller();
+        Intent result = new Intent(ACTION_RESULT + ".uninstall").setPackage(context.getPackageName());
+        PendingIntent pending = PendingIntent.getBroadcast(context, packageName.hashCode(), result,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
+        pi.uninstall(packageName, pending.getIntentSender());
+        Log.i(TAG, "uninstalling replaced package " + packageName);
+    }
+
     /**
      * Skip Play Protect's install-time verification for the next session. The APK was
      * already checked against its hash and our pinned signing keys. Only the system uid
@@ -137,11 +148,30 @@ final class Installer {
 
     /** True if the installed package is signed by one of the pinned keys. */
     boolean isTrusted(PackageInfo info) {
-        if (info == null || info.signingInfo == null) return false;
-        for (Signature sig : info.signingInfo.getApkContentsSigners()) {
-            if (!allowedSigners.contains(sha256(sig.toByteArray()))) return false;
+        if (info == null) return false;
+        PackageManager pm = context.getPackageManager();
+        for (String digest : allowedSigners) {
+            if (pm.hasSigningCertificate(info.packageName, unhex(digest),
+                    PackageManager.CERT_INPUT_SHA256)) {
+                return true;
+            }
         }
-        return true;
+        StringBuilder found = new StringBuilder();
+        if (info.signingInfo != null) {
+            for (Signature sig : info.signingInfo.getApkContentsSigners()) {
+                found.append(' ').append(sha256(sig.toByteArray()));
+            }
+        }
+        Log.w(TAG, info.packageName + " is not signed by a pinned key:" + found);
+        return false;
+    }
+
+    private static byte[] unhex(String hex) {
+        byte[] out = new byte[hex.length() / 2];
+        for (int i = 0; i < out.length; i++) {
+            out[i] = (byte) Integer.parseInt(hex.substring(2 * i, 2 * i + 2), 16);
+        }
+        return out;
     }
 
     static String sha256(File file) throws IOException {
@@ -166,7 +196,7 @@ final class Installer {
 
     private static String hex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
-        for (byte b : bytes) sb.append(String.format("%02x", b));
+        for (byte b : bytes) sb.append(String.format(Locale.ROOT, "%02x", b));
         return sb.toString();
     }
 }
