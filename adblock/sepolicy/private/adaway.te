@@ -10,10 +10,12 @@ allow init adaway_data_file:file create_file_perms;
 allow init system_file:file mounton;
 
 # AdAway is signed with the platform key: it writes its blocklist, asks init to
-# apply it, and reads the hosts file back to show whether blocking is active
-allow platform_app adaway_data_file:dir rw_dir_perms;
-allow platform_app adaway_data_file:file create_file_perms;
-set_prop(platform_app, adaway_prop)
+# apply it, and reads the hosts file back to show whether blocking is active.
+# platform_app_all covers platform_app and platform_app_36, the domain Android 17
+# gives platform-signed apps that target an older SDK, like AdAway.
+allow platform_app_all adaway_data_file:dir rw_dir_perms;
+allow platform_app_all adaway_data_file:file create_file_perms;
+set_prop(platform_app_all, adaway_prop)
 
 # The DNS resolver runs in netd and checks the hosts file before every lookup
 allow netd adaway_data_file:file r_file_perms;

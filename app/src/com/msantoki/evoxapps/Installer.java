@@ -4,6 +4,7 @@
 
 package com.msantoki.evoxapps;
 
+import android.app.AppGlobals;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -13,6 +14,8 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
+import android.os.Process;
+import android.os.RemoteException;
 import android.util.Log;
 
 import java.io.File;
@@ -73,6 +76,7 @@ final class Installer {
         params.setInstallReason(PackageManager.INSTALL_REASON_USER);
         params.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED);
 
+        skipVerification();
         int sessionId = pi.createSession(params);
         CountDownLatch done = new CountDownLatch(1);
         int[] status = {PackageInstaller.STATUS_FAILURE};
@@ -115,6 +119,29 @@ final class Installer {
             throw new IOException(entry.name + ": install failed (" + status[0] + ") " + message[0]);
         }
         Log.i(TAG, "installed " + entry.packageName + " " + entry.build);
+    }
+
+    /**
+     * Skip Play Protect's install-time verification for the next session. The APK was
+     * already checked against its hash and our pinned signing keys. Only the system uid
+     * may ask for this, which is why the app runs as android.uid.system.
+     */
+    private static void skipVerification() {
+        try {
+            AppGlobals.getPackageManager().getPackageInstaller()
+                    .disableVerificationForUid(Process.myUid());
+        } catch (RemoteException | SecurityException e) {
+            Log.w(TAG, "could not skip install verification", e);
+        }
+    }
+
+    /** True if the installed package is signed by one of the pinned keys. */
+    boolean isTrusted(PackageInfo info) {
+        if (info == null || info.signingInfo == null) return false;
+        for (Signature sig : info.signingInfo.getApkContentsSigners()) {
+            if (!allowedSigners.contains(sha256(sig.toByteArray()))) return false;
+        }
+        return true;
     }
 
     static String sha256(File file) throws IOException {

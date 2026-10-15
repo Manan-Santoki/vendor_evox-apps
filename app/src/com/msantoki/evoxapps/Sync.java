@@ -4,7 +4,12 @@
 
 package com.msantoki.evoxapps;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -32,25 +37,40 @@ import java.util.Map;
  *  - installed by us but gone now: the user uninstalled it, leave it alone
  *  - installed by us with an older build: update it
  * An app the user removed is only installed again from the settings screen.
- * A package that is present but was never installed by us (for example the
- * official Reddit from the Play Store) is not touched.
+ * A package that is present but was never installed by us is adopted if it is
+ * signed with one of our pinned keys (installed by hand from the same builds),
+ * and otherwise left alone (for example the official Reddit from the Play Store).
+ * A MicroG signed by someone else is reported as a conflict, since the patched
+ * Google apps refuse to work with it.
  */
 final class Sync {
     private static final String TAG = "EvoXApps";
     static final String PREFS = "sync";
     private static final Object LOCK = new Object();
 
-    enum State { NOT_INSTALLED, INSTALLED, UPDATE_AVAILABLE, REMOVED, EXTERNAL }
+    enum State { NOT_INSTALLED, INSTALLED, UPDATE_AVAILABLE, REMOVED, EXTERNAL, CONFLICT }
+
+    /** Other MicroG builds that stop the official MicroG-RE from working. */
+    private static final String[] OTHER_MICROG = {"com.mgoogle.android.gms", "org.microg.gms"};
+    private static final String CHANNEL = "status";
+    private static final int NOTIFICATION_CONFLICT = 1;
 
     static final class Status {
         final AppEntry entry;
         final State state;
         final String installedVersion;
+        /** For {@link State#CONFLICT}: the package that has to be uninstalled. */
+        final String conflictPackage;
 
         Status(AppEntry entry, State state, String installedVersion) {
+            this(entry, state, installedVersion, null);
+        }
+
+        Status(AppEntry entry, State state, String installedVersion, String conflictPackage) {
             this.entry = entry;
             this.state = state;
             this.installedVersion = installedVersion;
+            this.conflictPackage = conflictPackage;
         }
     }
 
@@ -96,7 +116,19 @@ final class Sync {
 
     Status status(AppEntry e) {
         PackageInfo pi = installedInfo(e.packageName);
+        if ("microg".equals(e.id)) {
+            String conflict = conflictingMicroG(pi);
+            if (conflict != null) {
+                return new Status(e, State.CONFLICT, pi == null ? null : pi.versionName, conflict);
+            }
+        }
         String ours = prefs.getString("build_" + e.id, null);
+        if (ours == null && pi != null && installer.isTrusted(pi)) {
+            // Signed with our keys, installed by hand or before the updater: manage it
+            ours = e.versionName.equals(pi.versionName) ? e.build : "adopted-" + pi.versionName;
+            prefs.edit().putString("build_" + e.id, ours).remove("removed_" + e.id).apply();
+            Log.i(TAG, "adopted " + e.packageName + " " + pi.versionName);
+        }
         if (prefs.getBoolean("removed_" + e.id, false)) {
             return new Status(e, pi == null ? State.REMOVED : State.EXTERNAL, pi == null ? null : pi.versionName);
         }
@@ -121,6 +153,10 @@ final class Sync {
                     // First time we notice the user uninstalled it
                     prefs.edit().putBoolean("removed_" + e.id, true).apply();
                     Log.i(TAG, e.packageName + " was uninstalled by the user, not reinstalling");
+                    continue;
+                }
+                if (s.state == State.CONFLICT) {
+                    notifyConflict(s.conflictPackage);
                     continue;
                 }
                 if (s.state != State.NOT_INSTALLED && s.state != State.UPDATE_AVAILABLE) continue;
@@ -168,9 +204,37 @@ final class Sync {
         }
     }
 
+    /** The MicroG that blocks the official one, or null. */
+    private String conflictingMicroG(PackageInfo official) {
+        if (official != null && !installer.isTrusted(official)) return official.packageName;
+        for (String pkg : OTHER_MICROG) {
+            if (installedInfo(pkg) != null) return pkg;
+        }
+        return null;
+    }
+
+    private void notifyConflict(String pkg) {
+        NotificationManager nm = context.getSystemService(NotificationManager.class);
+        nm.createNotificationChannel(new NotificationChannel(CHANNEL,
+                context.getString(R.string.app_name), NotificationManager.IMPORTANCE_DEFAULT));
+        PendingIntent open = PendingIntent.getActivity(context, 0,
+                new Intent(context, MainActivity.class), PendingIntent.FLAG_IMMUTABLE);
+        nm.notify(NOTIFICATION_CONFLICT, new Notification.Builder(context, CHANNEL)
+                .setSmallIcon(R.drawable.ic_apps)
+                .setContentTitle(context.getString(R.string.conflict_title))
+                .setContentText(context.getString(R.string.conflict_notification, pkg))
+                .setStyle(new Notification.BigTextStyle()
+                        .bigText(context.getString(R.string.conflict_notification, pkg)))
+                .setContentIntent(open)
+                .setAutoCancel(true)
+                .build());
+        Log.w(TAG, "conflicting MicroG installed: " + pkg);
+    }
+
     private PackageInfo installedInfo(String pkg) {
         try {
-            return context.getPackageManager().getPackageInfo(pkg, 0);
+            return context.getPackageManager().getPackageInfo(pkg,
+                    PackageManager.GET_SIGNING_CERTIFICATES);
         } catch (PackageManager.NameNotFoundException e) {
             return null;
         }

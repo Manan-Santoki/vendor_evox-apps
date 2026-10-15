@@ -5,6 +5,8 @@
 package com.msantoki.evoxapps;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.format.DateUtils;
 import android.util.TypedValue;
@@ -77,6 +79,13 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        // Back from uninstalling a conflicting app, for example
+        if (appList.getChildCount() > 0) refresh(false);
+    }
+
+    @Override
     protected void onDestroy() {
         worker.shutdownNow();
         super.onDestroy();
@@ -108,7 +117,13 @@ public class MainActivity extends Activity {
             t.addView(text(s.entry.name, 16, true));
             t.addView(text(describe(s), 14, false));
             r.addView(t, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-            if (s.state == Sync.State.NOT_INSTALLED || s.state == Sync.State.REMOVED
+            if (s.state == Sync.State.CONFLICT) {
+                Button b = new Button(this);
+                b.setText(R.string.uninstall);
+                b.setOnClickListener(v -> startActivity(new Intent(Intent.ACTION_DELETE,
+                        Uri.parse("package:" + s.conflictPackage))));
+                r.addView(b);
+            } else if (s.state == Sync.State.NOT_INSTALLED || s.state == Sync.State.REMOVED
                     || s.state == Sync.State.UPDATE_AVAILABLE) {
                 Button b = new Button(this);
                 b.setText(s.state == Sync.State.UPDATE_AVAILABLE ? R.string.update : R.string.install);
@@ -132,6 +147,7 @@ public class MainActivity extends Activity {
             case UPDATE_AVAILABLE: return getString(R.string.state_update, s.entry.versionName);
             case REMOVED: return getString(R.string.state_removed);
             case EXTERNAL: return getString(R.string.state_external);
+            case CONFLICT: return getString(R.string.state_conflict, s.conflictPackage);
             default: return getString(R.string.state_not_installed);
         }
     }

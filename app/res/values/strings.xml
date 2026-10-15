@@ -17,6 +17,10 @@
     <string name="state_not_installed">Not installed</string>
     <string name="state_removed">Uninstalled</string>
     <string name="state_external">Installed from another source, not managed here</string>
+    <string name="state_conflict">A different MicroG (%1$s) is installed. YouTube and YouTube Music only work with the official MicroG-RE: uninstall it, then install MicroG-RE here.</string>
+    <string name="conflict_title">Different MicroG installed</string>
+    <string name="conflict_notification">%1$s stops YouTube and YouTube Music from signing in. Tap to replace it with the official MicroG-RE.</string>
+    <string name="uninstall">Uninstall</string>
     <string name="install">Install</string>
     <string name="update">Update</string>
     <string name="installing">Installing…</string>
